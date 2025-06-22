@@ -122,6 +122,6 @@ class ColorButton(Button):
             print(f"Criado novo cargo: {self.role_name}")
 
         await member.add_roles(role)
-        # await interaction.response.send_message(f"✅ Cor definida: **{self.role_name}**", ephemeral=True)
+        await interaction.response.defer(ephemeral=True)
 
 bot.run(TOKEN)
