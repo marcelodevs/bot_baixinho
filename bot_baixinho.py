@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord.ui import View, Button
 import requests
 import os
 
@@ -32,14 +33,14 @@ async def on_member_remove(member):
 async def on_message_delete(message):
     canal = bot.get_channel(CANAL_LOG)
     if canal and not message.author.bot:
-        await canal.send(f"🗑️ Mensagem apagada de {message.author.mention} no canal {message.channel}: ```{message.content}```")
+        await canal.send(f"🗑️ Mensagem apagada no canal {message.channel}: ```{message.author}: {message.content}```")
 
 # Log de mensagens editadas
 @bot.event
 async def on_message_edit(before, after):
     canal = bot.get_channel(CANAL_LOG)
     if canal and not before.author.bot:
-        await canal.send(f"✏️ Mensagem editada por {before.author.mention}: Antes: ```{before.content}``` Depois: ```{after.content}```")
+        await canal.send(f"✏️ Mensagem editada por {before.author}: Antes: ```{before.content}``` Depois: ```{after.content}```")
 
 # Clima (!clima <cidade>)
 @bot.command(name="clima")
@@ -76,5 +77,51 @@ async def resenha(ctx):
 @bot.command(name="ping")
 async def ping(ctx):
     await ctx.send("🏓 Pong! Estou online.")
+
+# Lista de cargos de cor disponíveis
+CORES_DISPONIVEIS = {
+    "🔴 Vermelho": "Vermelho",
+    "🔵 Azul": "Azul",
+    "🟢 Verde": "Verde",
+    "⚫ Preto": "Preto",
+    "🐷 Rosa": "Rosa",
+    "🟣 Roxo": "Roxo",
+    "🟡 Amarelo": "Amarelo",
+    "🟠 Laranja": "Laranja"
+}
+
+@bot.command(name="cores")
+async def escolher_cor(ctx):
+    class CoresView(View):
+        def __init__(self):
+            super().__init__(timeout=None)
+            for emoji_nome, nome_cargo in CORES_DISPONIVEIS.items():
+                emoji, _ = emoji_nome.split(" ", 1)
+                self.add_item(ColorButton(emoji, nome_cargo))
+
+    await ctx.send("🎨 Escolha sua cor clicando em um botão:\n", view=CoresView())
+
+class ColorButton(Button):
+    def __init__(self, emoji, role_name):
+        super().__init__(style=discord.ButtonStyle.primary, emoji=emoji, label=role_name)
+        self.role_name = role_name
+
+    async def callback(self, interaction: discord.Interaction):
+        guild = interaction.guild
+        member = interaction.user
+
+        # Remove outras cores
+        roles_to_remove = [role for role in member.roles if role.name in CORES_DISPONIVEIS.values()]
+        await member.remove_roles(*roles_to_remove)
+
+        # Dá a nova cor
+        role = discord.utils.get(guild.roles, name=self.role_name)
+        if not role:
+            # Se o cargo não existir, cria
+            role = await guild.create_role(name=self.role_name)
+            print(f"Criado novo cargo: {self.role_name}")
+
+        await member.add_roles(role)
+        # await interaction.response.send_message(f"✅ Cor definida: **{self.role_name}**", ephemeral=True)
 
 bot.run(TOKEN)
