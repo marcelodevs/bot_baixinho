@@ -5,11 +5,13 @@ import requests
 import os
 
 # Configurações Iniciais
-TOKEN = os.getenv("DISCORD_BOT_TOKEN") or "coloque_seu_token_aqui"
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 PREFIX = "!"
 CANAL_LOG = 1386352288808833094
-CIDADES_SUPORTADAS = ["belo horizonte", "rio de janeiro", "fortaleza"]
-API_CLIMA_KEY = os.getenv("OPENWEATHER_API_KEY") or "sua_chave_da_api_openweather"
+CANAL_WELCOME = 1386353310604333091
+API_CLIMA_KEY = os.getenv("OPENWEATHER_API_KEY")
+
+print(f"Token carregado: {TOKEN}")
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=PREFIX, intents=intents)
@@ -17,16 +19,23 @@ bot = commands.Bot(command_prefix=PREFIX, intents=intents)
 # Mensagem de boas-vindas
 @bot.event
 async def on_member_join(member):
-    canal = bot.get_channel(CANAL_LOG)
+    canal = discord.utils.get(member.guild.text_channels, name="geral")
     if canal:
-        await canal.send(f"👋 Olá, {member.mention}! Bem-vindo ao servidor!")
+        embed = discord.Embed(
+            title=f"👋 Bem-vindo ao servidor!",
+            description=f"{member.mention}, esperamos que você aproveite sua estadia!",
+            color=discord.Color.blurple()
+        )
+        embed.set_thumbnail(url=member.avatar.url if member.avatar else member.default_avatar.url)
+        embed.set_footer(text=f"Usuário: {member.name}#{member.discriminator}", icon_url=member.avatar.url)
+        await canal.send(embed=embed)
 
 # Log de saída
 @bot.event
 async def on_member_remove(member):
     canal = bot.get_channel(CANAL_LOG)
     if canal:
-        await canal.send(f"🚪 {member.name} saiu do servidor.")
+        await canal.send(f"```{member.name} saiu do servidor.```")
 
 # Log de mensagens apagadas
 @bot.event
@@ -46,11 +55,8 @@ async def on_message_edit(before, after):
 @bot.command(name="clima")
 async def clima(ctx, *, cidade):
     cidade_lower = cidade.lower()
-    if cidade_lower not in CIDADES_SUPORTADAS:
-        await ctx.send(f"❌ Cidade não suportada. Tente uma dessas: {', '.join(CIDADES_SUPORTADAS)}")
-        return
 
-    url = f"https://api.openweathermap.org/data/2.5/weather?q={cidade}&appid={API_CLIMA_KEY}&lang=pt_br&units=metric"
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={cidade_lower}&appid={API_CLIMA_KEY}&lang=pt_br&units=metric"
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
